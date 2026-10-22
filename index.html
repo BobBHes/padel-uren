@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Padel Uren</title>
+<meta name="theme-color" content="#e8f0f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#060d18" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Padel Uren">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-64.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="achtergrond" aria-hidden="true">
+  <div class="vlek v1"></div><div class="vlek v2"></div><div class="vlek v3"></div>
+  <!-- lijnen van een padelbaan, schuin op de achtergrond -->
+  <svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice"><g transform="rotate(-8 200 400)"><rect x="40" y="60" width="320" height="680" rx="4"/><path d="M40 400h320M200 170v460M40 170h320M40 630h320"/></g></svg>
+</div>
+
+<div class="balk" id="balk" aria-hidden="true"><span id="balk-titel">Lessen</span></div>
+
+<header class="kop">
+  <button type="button" id="instellingen" class="instel glas" aria-label="Jouw gegevens en instellingen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  <h1 id="titel">Lessen</h1>
+  <p id="ondertitel"></p>
+</header>
+
+<main id="main" aria-live="polite"></main>
+
+<div class="dok">
+  <nav class="tabs glas" aria-label="Hoofdmenu">
+    <div class="pil" aria-hidden="true"><div class="padelbal"></div></div>
+    <button data-view="lessen" class="actief" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="4"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>Lessen</button>
+    <button data-view="facturen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3h8l4 4v12.5a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19.5v-15A1.5 1.5 0 0 1 6.5 3z"/><path d="M14 3v4.5h4.5M8.5 12.5h7M8.5 16.5h5"/></svg>Facturen</button>
+    <button data-view="stats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3.2" height="6.5" rx="1.2"/><rect x="10.4" y="6" width="3.2" height="11.5" rx="1.2"/><rect x="15.3" y="9" width="3.2" height="8.5" rx="1.2"/></svg>Statistiek</button>
+    <button data-view="klanten"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg>Klanten</button>
+  </nav>
+  <button id="plus" class="plus" aria-label="Nieuwe les"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+
+<dialog id="sheet" class="sheet" aria-labelledby="sheet-titel"><form method="dialog" id="sheet-form" novalidate></form></dialog>
+<div id="toast" class="toast glas" role="status" aria-live="polite" popover="manual"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
