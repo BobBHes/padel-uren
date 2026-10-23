@@ -1,5 +1,5 @@
 // Offline: app-bestanden uit de cache, bij een nieuwe versie het VERSIE-nummer ophogen.
-const VERSIE = 'padel-uren-v9';
+const VERSIE = 'padel-uren-v10';
 const BESTANDEN = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon-64.png', 'icon-180.png', 'icon-192.png', 'icon-512.png', 'lib/jspdf.umd.min.js'];
 
 self.addEventListener('install', e => {

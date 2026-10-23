@@ -546,3 +546,56 @@ svg.inline { width: 16px; height: 16px; vertical-align: -2px; color: var(--baan)
 .schakel input:checked { background: #34c759; }
 .schakel input:checked::after { transform: translateX(20px); }
 .schakel input:focus-visible { outline: 3px solid var(--baan); outline-offset: 2px; }
+
+/* ---------- Mooier: baan-scorebord, glans, klantkleuren ---------- */
+:root { --glans: rgba(255,255,255,.6); }
+@media (prefers-color-scheme: dark) { :root { --glans: rgba(255,255,255,.07); } }
+.achtergrond .vlek { opacity: .66; }
+@media (prefers-color-scheme: dark) { .achtergrond .vlek { opacity: .55; } }
+
+/* lichtval van linksboven over elk glasvlak */
+.glas { background-image: linear-gradient(150deg, var(--glans) 0%, transparent 45%); }
+
+/* Scorebord als padelbaan: de blikvanger van het scherm */
+.baan {
+  position: relative; overflow: hidden; isolation: isolate; color: #fff; border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,.28);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='.16' stroke-width='2'%3E%3Crect x='14' y='14' width='372' height='172' rx='3'/%3E%3Cpath d='M200 14v172M86 14v172M314 14v172M86 100h228'/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat,
+    radial-gradient(130% 160% at 0% 0%, #4a95ff 0%, #1668e3 42%, #0a3c96 100%);
+  box-shadow: 0 16px 36px rgba(16,88,210,.32), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -2px 6px rgba(0,0,40,.18);
+}
+.baan::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(165deg, rgba(255,255,255,.3) 0%, rgba(255,255,255,.06) 32%, transparent 55%); }
+.baan small { color: rgba(255,255,255,.8); }
+.baan.score div + div { border-left-color: rgba(255,255,255,.2); }
+.baan .delta.op { background: rgba(255,255,255,.2); color: #fff; }
+.baan .delta.neer { background: rgba(0,0,0,.18); color: rgba(255,255,255,.85); }
+.baan .record { background: var(--bal); color: #14240a; }
+/* bal in de hoek van de grote omzetkaart */
+.held.baan::after { content: ""; position: absolute; right: -14px; top: -14px; width: 74px; height: 74px; border-radius: 50%; z-index: -1;
+  background: radial-gradient(circle at 35% 35%, #f6ffb8, var(--bal) 45%, var(--bal-donker)); opacity: .9;
+  box-shadow: 0 0 40px rgba(215,242,91,.55); }
+.held.baan small { color: rgba(255,255,255,.82); }
+
+/* eigen kleur per klant */
+.rij .tegel.letter[style*="--h"] { background: hsl(var(--h) 78% 92%); color: hsl(var(--h) 58% 33%); }
+@media (prefers-color-scheme: dark) { .rij .tegel.letter[style*="--h"] { background: hsl(var(--h) 32% 24%); color: hsl(var(--h) 80% 80%); } }
+
+/* vandaag en gepland herkenbaar */
+.rij .tegel.vandaag { background: var(--bal); color: #14240a; box-shadow: 0 4px 12px rgba(150,180,0,.3); }
+.rij .tegel.gepland { background: transparent; box-shadow: inset 0 0 0 1.5px var(--baan); }
+@media (prefers-color-scheme: dark) { .rij .tegel.vandaag { color: #14240a; } .rij .tegel.gepland { box-shadow: inset 0 0 0 1.5px #8dbaff; } }
+
+/* meldingen compacter */
+.melding { padding: 12px 14px 8px; gap: 2px 12px; }
+.m-icoon { width: 34px; height: 34px; border-radius: 10px; }
+.m-icoon .padelbal { width: 20px; height: 20px; }
+.m-tekst b:first-child { font-size: 15px; }
+.m-tekst span { font-size: 13px; }
+.m-knoppen { margin-top: 2px; }
+.melding { position: relative; }
+.melding:has(.m-sluit) .m-tekst { padding-right: 34px; padding-bottom: 4px; }
+.m-sluit { position: absolute; right: 8px; top: 8px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--druk); color: var(--zacht); display: grid; place-items: center; }
+.m-sluit::after { content: ""; position: absolute; inset: -6px; }
+.m-sluit svg { width: 16px; height: 16px; stroke-width: 2.4; }

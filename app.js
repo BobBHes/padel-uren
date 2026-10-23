@@ -83,6 +83,12 @@ const datumObj = d => new Date(d + 'T12:00:00');
 const klant = kid => S.klanten.find(k => k.id === kid);
 const regelBedrag = (les, d) => Math.round(d.tarief * les.duur / 60);
 const lesBedrag = les => les.deelnemers.reduce((s, d) => s + regelBedrag(les, d), 0);
+// Vaste kleur per klant (zelfde klant, zelfde kleur), uit een rustig palet
+const TINTEN = [212, 160, 28, 280, 340, 190, 95, 250, 8, 130];
+const avatar = (naam, sleutel) => {
+  let h = 0; for (const c of String(sleutel || naam)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `<div class="tegel letter" style="--h:${TINTEN[h % TINTEN.length]}" aria-hidden="true">${esc(initialen(naam))}</div>`;
+};
 const initialen = n => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
 // Gefactureerd per deelnemer (bij een groepsles kan de een al wel, de ander nog niet); l.factuur is van vóór stap 2
 const gefact = (l, d) => d.factuur || l.factuur || null;
@@ -359,8 +365,9 @@ function meldingen() {
   let html = '';
   if (!geinstalleerd() && !onthouden('padel-install-weg') && (opIos() || installPrompt)) {
     html += `<div class="melding glas in"><div class="m-icoon">${BAL}</div><div class="m-tekst"><b>Zet Padel Uren op je beginscherm</b>
-      ${opIos() ? `<span>Tik in Safari op ${DEEL_KLEIN} <b>Deel</b> en kies <b>Zet op beginscherm</b>. Dan werkt het als een echte app en blijven je gegevens veilig bewaard.</span>` : '<span>Dan werkt het als een echte app, ook zonder internet.</span>'}</div>
-      <div class="m-knoppen"><button type="button" class="link" data-actie="install-weg">Begrepen</button>${installPrompt ? '<button type="button" class="knop hoofd klein" data-actie="installeer">Installeren</button>' : ''}</div></div>`;
+      ${opIos() ? `<span>Safari: ${DEEL_KLEIN} <b>Deel</b> → <b>Zet op beginscherm</b>. Dan blijven je gegevens veilig bewaard.</span>` : '<span>Dan werkt het als een echte app, ook zonder internet.</span>'}</div>
+      <button type="button" class="m-sluit" data-actie="install-weg" aria-label="Melding sluiten">${KRUIS}</button>
+      ${installPrompt ? '<div class="m-knoppen"><button type="button" class="knop hoofd klein" data-actie="installeer">Installeren</button></div>' : ''}</div>`;
   }
   const n = dagenGeleden(S.ik.laatsteBackup);
   if (S.lessen.length >= 3 && (n === null || n >= 14) && !S.backupLater) {
@@ -411,7 +418,7 @@ function viewLessen() {
   $('#ondertitel').textContent = voornaam ? `${groet()}, ${voornaam} · ${datum}` : datum;
   const min = week.reduce((s, l) => s + l.duur, 0), omzet = week.reduce((s, l) => s + lesBedrag(l), 0);
   const r = rally();
-  const score = `<div class="score glas in" aria-label="Deze week">
+  const score = `<div class="score baan in" aria-label="Deze week">
     <div><b data-tel="${min}" data-fmt="uren">${uren(min)}</b><small>uren</small></div>
     <div><b data-tel="${week.length}" data-fmt="getal">${week.length}</b><small>lessen</small></div>
     <div><b data-tel="${omzet}" data-fmt="euro">${euro(omzet)}</b><small>omzet</small></div></div>
@@ -435,7 +442,7 @@ function viewLessen() {
     const nGef = l.deelnemers.filter(x => gefact(l, x)).length;
     const fBadge = nGef === l.deelnemers.length ? ' <span class="badge">gefactureerd</span>' : nGef ? ' <span class="badge">deels gefactureerd</span>' : '';
     html += `<button type="button" class="rij" data-les="${l.id}">
-      <div class="tegel"><b>${d.getDate()}</b><small>${d.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '')}</small></div>
+      <div class="tegel${l.datum === vandaag() ? ' vandaag' : l.datum > vandaag() ? ' gepland' : ''}"><b>${d.getDate()}</b><small>${d.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '')}</small></div>
       <div class="midden"><div class="naam">${esc(namen)}</div>
         <div class="sub">${esc(l.tijd)} · ${uren(l.duur)}${groep ? ` <span class="badge groep">groep ${l.deelnemers.length}</span>` : ''}${fBadge}</div></div>
       <div class="rechts">${euro(lesBedrag(l))}</div></button>`;
@@ -461,7 +468,7 @@ function openPerKlant() {
 const teLaat = f => f.status !== 'betaald' && f.verval < vandaag();
 const PIJL = '<svg class="pijl" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 const factuurRij = f => `<button type="button" class="rij" data-factuur="${f.id}">
-  <div class="tegel letter">${esc(initialen(f.aan.naam))}</div>
+  ${avatar(f.aan.naam, f.klantId)}
   <div class="midden"><div class="naam">${esc(f.aan.naam)}</div>
     <div class="sub">${f.nummer} · ${f.status === 'betaald' ? `betaald ${kortDatum(f.betaaldOp)}` : `vervalt ${kortDatum(f.verval)}`}${teLaat(f) ? ' <span class="badge rood">te laat</span>' : ''}${f.status !== 'betaald' && !f.verstuurdOp ? ' <span class="badge grijs">niet verstuurd</span>' : ''}</div></div>
   <div class="rechts">${euro(f.totaal)}</div>${PIJL}</button>`;
@@ -486,7 +493,7 @@ function viewFacturen() {
       + rijen.map(r => {
         const k = klant(r.klantId);
         return `<button type="button" class="rij" data-maak="${r.klantId}">
-          <div class="tegel letter">${esc(initialen(k?.naam || '?'))}</div>
+          ${avatar(k?.naam || '?', r.klantId)}
           <div class="midden"><div class="naam">${esc(k?.naam || '?')}</div><div class="sub">${r.regels.length} ${r.regels.length === 1 ? 'les' : 'lessen'} · ${uren(r.min)} · sinds ${kortDatum(r.regels[r.regels.length - 1].les.datum)}</div></div>
           <div class="rechts">${euro(r.bedrag)}</div>${PIJL}</button>`;
       }).join('') + '</div>';
@@ -518,7 +525,7 @@ function viewKlanten() {
     <div class="lijst glas in">` + S.klanten.map(k => {
     const n = S.lessen.filter(l => l.deelnemers.some(d => d.klantId === k.id)).length;
     return `<button type="button" class="rij" data-klant="${k.id}" data-naam="${esc(k.naam.toLowerCase())}">
-      <div class="tegel letter">${esc(initialen(k.naam))}</div>
+      ${avatar(k.naam, k.id)}
       <div class="midden"><div class="naam">${esc(k.naam)}</div><div class="sub">${esc(k.email || k.telefoon || 'Geen contactgegevens')}</div></div>
       <div class="rechts">${euro(k.tariefPrive)}<small>${n} ${n === 1 ? 'les' : 'lessen'}</small></div></button>`;
   }).join('') + '</div>';
@@ -631,7 +638,7 @@ function viewStats() {
     </div>
   </div>
 
-  <div class="held glas in">
+  <div class="held baan in">
     <small>Omzet ${esc(bereikLabel(f.periode, r))}</small>
     <b data-tel="${c.omzet}" data-fmt="euro">${euro(c.omzet)}</b>
     <div class="held-onder">${pijl}${record}</div>
@@ -1432,8 +1439,9 @@ new IntersectionObserver(([e]) => $('#balk').classList.toggle('zicht', !e.isInte
 (async () => {
   const h = location.hash.slice(1); if (VIEWS.includes(h)) S.view = h; else if (h === 'open') S.view = 'facturen';
   intro();
-  await laad(); teken();
-  trofeeen(true); // wat er al is, telt stil mee
+  await laad();
+  await trofeeen(true); // wat er al is, telt stil mee (vóór het tekenen, anders staat de kast op 0)
+  teken();
   navigator.storage?.persist?.(); // vraag de browser de data niet op te ruimen
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js');
 })();
