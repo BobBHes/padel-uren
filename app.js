@@ -135,7 +135,7 @@ const midden = el => { const r = el.getBoundingClientRect(); return { x: r.left 
 
 // Bal vliegt van de plusknop omhoog, stuitert, kaatst tegen de glazen wand links en landt op het balletje in de tabbalk
 function vlucht() {
-  if (rustig()) return;
+  if (rustig()) return pok(.8);
   const start = midden($('#plus')), doel = midden($('.tabs .pil .padelbal'));
   const H = innerHeight, vloer = start.y - 15, duur = 1700;
   const buiten = document.createElement('div');
@@ -164,6 +164,8 @@ function vlucht() {
   bal.animate([{ rotate: '0deg' }, { rotate: '900deg' }], { duration: duur, easing: 'cubic-bezier(.3,.5,.6,1)' });
 
   setTimeout(() => muur.animate([{ opacity: 0 }, { opacity: 1, offset: .15 }, { opacity: 0 }], { duration: 520, easing: 'ease-out' }), duur * .5 - 40);
+  // geluid op elke stuit: racket, vloer, glazen wand, vloer
+  pok(1); [[.38, .6, false], [.5, .8, true], [.78, .35, false]].forEach(([t, s, g]) => setTimeout(() => pok(s, g), duur * t));
   setTimeout(() => {
     buiten.remove(); muur.remove();
     $('.tabs .pil .padelbal').animate([{ transform: 'scale(2.2)' }, { transform: 'scale(1)' }], { duration: 500, easing: 'cubic-bezier(.3,1.6,.5,1)' });
@@ -191,6 +193,68 @@ function confetti(n = 26) {
       { transform: `translate(${x0 + dx}px, ${H + 40}px) scale(1) rotate(${Math.random() * 720}deg)`, opacity: .9 },
     ], { duration: duur, fill: 'forwards' }).onfinish = () => el.remove();
   }
+}
+
+// "Pok": het geluid van een padelbal op het racket (geen bestand nodig, Web Audio). Glas klinkt hoger.
+let audio;
+function pok(sterkte = 1, glas = false) {
+  if (S.ik.geluid === false) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+    const t = audio.currentTime, uit = audio.createGain();
+    uit.gain.value = .45 * sterkte; uit.connect(audio.destination);
+    const toon = audio.createOscillator(), tg = audio.createGain();
+    toon.type = 'triangle';
+    toon.frequency.setValueAtTime(glas ? 1150 : 620, t); toon.frequency.exponentialRampToValueAtTime(glas ? 700 : 240, t + .07);
+    tg.gain.setValueAtTime(1, t); tg.gain.exponentialRampToValueAtTime(.001, t + (glas ? .16 : .09));
+    toon.connect(tg).connect(uit); toon.start(t); toon.stop(t + .2);
+    // korte tik van de vilt/snaren-aanslag
+    const n = audio.createBuffer(1, audio.sampleRate * .02, audio.sampleRate), data = n.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const ruis = audio.createBufferSource(), bp = audio.createBiquadFilter();
+    ruis.buffer = n; bp.type = 'bandpass'; bp.frequency.value = glas ? 3500 : 1800;
+    ruis.connect(bp).connect(uit); ruis.start(t);
+  } catch {}
+}
+const tril = (ms = 12) => { try { navigator.vibrate?.(ms); } catch {} }; // Android; iOS laat websites niet trillen
+
+/* ---------- Trofeeën ---------- */
+const TROFEEEN = [
+  ['les1', 'Eerste les', 'De eerste les staat erin', s => s.lessen >= 1, s => [s.lessen, 1]],
+  ['les10', '10 lessen', 'Dubbele cijfers', s => s.lessen >= 10, s => [s.lessen, 10]],
+  ['les50', '50 lessen', 'Halve eeuw op de baan', s => s.lessen >= 50, s => [s.lessen, 50]],
+  ['les100', '100 lessen', 'Honderd keer vamos', s => s.lessen >= 100, s => [s.lessen, 100]],
+  ['les250', '250 lessen', 'Legende van de baan', s => s.lessen >= 250, s => [s.lessen, 250]],
+  ['uur100', '100 uur', 'Honderd uur lesgegeven', s => s.min >= 6000, s => [Math.floor(s.min / 60), 100]],
+  ['groep', 'Groepsles', 'Eerste groepsles gegeven', s => s.groep >= 1, s => [s.groep, 1]],
+  ['vol', 'Volle baan', 'Groepsles met 4 spelers', s => s.vol, s => [s.vol ? 1 : 0, 1]],
+  ['omzet1', '€ 1.000', 'Eerste duizend binnen', s => s.omzet >= 100000, s => [s.omzet / 100, 1000]],
+  ['omzet5', '€ 5.000', 'Vijf ruggen', s => s.omzet >= 500000, s => [s.omzet / 100, 5000]],
+  ['omzet10', '€ 10.000', 'Vijf cijfers', s => s.omzet >= 1000000, s => [s.omzet / 100, 10000]],
+  ['factuur1', 'Eerste factuur', 'Officieel ondernemer', s => s.facturen >= 1, s => [s.facturen, 1]],
+  ['betaald10', '10x betaald', 'Tien facturen binnen', s => s.betaald >= 10, s => [s.betaald, 10]],
+  ['rally4', 'Rally 4', '4 weken op rij les', s => s.rally >= 4, s => [s.rally, 4]],
+  ['rally12', 'Rally 12', '12 weken op rij les', s => s.rally >= 12, s => [s.rally, 12]],
+];
+function trofeeStand() {
+  const gegeven = S.lessen.filter(l => l.datum <= vandaag());
+  return {
+    lessen: gegeven.length, min: gegeven.reduce((s, l) => s + l.duur, 0), omzet: gegeven.reduce((s, l) => s + lesBedrag(l), 0),
+    groep: gegeven.filter(l => l.deelnemers.length > 1).length, vol: gegeven.some(l => l.deelnemers.length >= 4),
+    facturen: S.facturen.length, betaald: S.facturen.filter(f => f.status === 'betaald').length, rally: rally(),
+  };
+}
+// Nieuwe trofee: opslaan en vieren. stil = alleen opslaan (bij openen of na een back-up, geen regen van meldingen)
+async function trofeeen(stil = false) {
+  const st = trofeeStand(), had = S.ik.trofeeen || {};
+  const nieuw = TROFEEEN.filter(([k, , , ok]) => !had[k] && ok(st));
+  if (!nieuw.length) return;
+  S.ik.trofeeen = { ...had, ...Object.fromEntries(nieuw.map(([k]) => [k, vandaag()])) };
+  await DB.zet('instellingen', S.ik, 'ik');
+  if (stil) return;
+  const [, titel] = nieuw[nieuw.length - 1];
+  setTimeout(() => { confetti(30); pok(.8); toast(`Trofee: ${titel}!`, { duur: 3200 }); }, 1900);
 }
 
 // Getallen tellen op naar hun waarde
@@ -246,7 +310,7 @@ function smash(knop) {
   const bal = knop.querySelector('.padelbal');
   if (!bal || bal.dataset.weg) return;
   bal.dataset.weg = '1';
-  toast(kreet());
+  toast(kreet()); pok(1.2); tril();
   if (rustig()) { delete bal.dataset.weg; return; }
   bal.style.animation = 'none';
   bal.animate([
@@ -307,16 +371,61 @@ function meldingen() {
   return html;
 }
 
+const groet = () => { const u = new Date().getHours(); return u < 6 ? 'Goedenacht' : u < 12 ? 'Goedemorgen' : u < 18 ? 'Goedemiddag' : 'Goedenavond'; };
+const zelfdeGroep = (a, b) => a.deelnemers.length === b.deelnemers.length && a.deelnemers.every(d => b.deelnemers.some(x => x.klantId === d.klantId));
+const plusDagen = (d, n) => { const x = datumObj(d); x.setDate(x.getDate() + n); return iso(x); };
+
+// Rally: aantal weken op rij met minstens één les (deze week telt mee zodra er een les is)
+function rally() {
+  const weken = new Set(S.lessen.filter(l => l.datum <= vandaag()).map(l => weekStart(l.datum)));
+  let w = weekStart(vandaag()), n = 0;
+  if (!weken.has(w)) w = plusDagen(w, -7);
+  while (weken.has(w)) { n++; w = plusDagen(w, -7); }
+  return n;
+}
+
+// Lessen van vorige week die deze week nog niet staan: met één tik herhalen
+function herhaalVoorstellen() {
+  const deze = weekStart(vandaag()), vorige = plusDagen(deze, -7);
+  return S.lessen.filter(l => l.datum >= vorige && l.datum < deze)
+    .filter(l => !S.lessen.some(x => x.datum === plusDagen(l.datum, 7) && x.tijd === l.tijd && zelfdeGroep(x, l)))
+    .sort((a, b) => (a.datum + a.tijd).localeCompare(b.datum + b.tijd)).slice(0, 6);
+}
+
+async function herhaal(bron) {
+  const nieuw = bron.filter(Boolean).map(l => ({ ...structuredClone(l), id: id(), datum: plusDagen(l.datum, 7), factuur: null, deelnemers: l.deelnemers.map(({ factuur, ...d }) => d) }));
+  if (!nieuw.length) return;
+  for (const l of nieuw) await DB.zet('lessen', l);
+  await laad(); teken(true); vlucht(); tril();
+  toast(nieuw.length === 1 ? `Les herhaald · ${kreet()}` : `${nieuw.length} lessen herhaald · ${kreet()}`, { actie: 'Ongedaan', bij: async () => {
+    for (const l of nieuw) await DB.weg('lessen', l.id);
+    await laad(); teken(false); toast('Weggehaald');
+  } });
+  trofeeen();
+}
+
 function viewLessen() {
   const week = dezeWeek();
-  $('#ondertitel').textContent = new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+  const datum = new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+  const voornaam = (S.ik.naam || '').split(/\s+/)[0];
+  $('#ondertitel').textContent = voornaam ? `${groet()}, ${voornaam} · ${datum}` : datum;
   const min = week.reduce((s, l) => s + l.duur, 0), omzet = week.reduce((s, l) => s + lesBedrag(l), 0);
+  const r = rally();
   const score = `<div class="score glas in" aria-label="Deze week">
     <div><b data-tel="${min}" data-fmt="uren">${uren(min)}</b><small>uren</small></div>
     <div><b data-tel="${week.length}" data-fmt="getal">${week.length}</b><small>lessen</small></div>
-    <div><b data-tel="${omzet}" data-fmt="euro">${euro(omzet)}</b><small>omzet</small></div></div>`;
+    <div><b data-tel="${omzet}" data-fmt="euro">${euro(omzet)}</b><small>omzet</small></div></div>
+    ${r >= 2 ? `<div class="rally in" title="Weken op rij met minstens één les"><span class="rally-ballen" aria-hidden="true">${BAL.repeat(Math.min(r, 5))}</span><span>Rally van <b>${r} weken</b> op rij${r >= 12 ? ' · onstopbaar!' : r >= 4 ? ' · lekker bezig' : ''}</span></div>` : ''}`;
   if (!S.lessen.length) return meldingen() + score + leeg('Nog geen lessen', 'Tik op de gele bal rechtsonder om je eerste les vast te leggen.');
-  let html = meldingen() + score, huidige = '';
+  const voorstel = herhaalVoorstellen();
+  const herhaal = voorstel.length ? `<section class="herhaal glas in" aria-labelledby="h-titel">
+    <div class="kaart-kop"><h2 id="h-titel">Vaste lessen van vorige week</h2>${voorstel.length > 1 ? '<button type="button" class="link" data-herhaal="alles">Alles</button>' : ''}</div>
+    <div class="chips">${voorstel.map(l => {
+      const d = datumObj(plusDagen(l.datum, 7)).toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '');
+      return `<button type="button" class="chip herhaal-chip" data-herhaal="${l.id}" aria-label="Zet ${esc(l.deelnemers.map(x => klant(x.klantId)?.naam).join(', '))} ook op ${d} ${l.tijd}">
+        <span class="plusje" aria-hidden="true">+</span><b>${d} ${esc(l.tijd)}</b> ${esc(l.deelnemers.map(x => (klant(x.klantId)?.naam || '?').split(' ')[0]).join(', '))}</button>`;
+    }).join('')}</div></section>` : '';
+  let html = meldingen() + score + herhaal, huidige = '';
   for (const l of S.lessen) {
     const w = weekStart(l.datum);
     if (w !== huidige) { if (huidige) html += '</div>'; html += `<h2 class="groep in">${weekLabel(w)}</h2><div class="lijst glas in">`; huidige = w; }
@@ -558,7 +667,23 @@ function viewStats() {
       <span class="plek">${i + 1}</span>
       <span class="tk-midden"><span class="tk-naam">${esc(klant(t.k)?.naam || '?')}<span>${euro(t.bedrag)}</span></span>
       <span class="tk-balk"><span style="--w:${Math.max(2, t.bedrag / max * 100)}%"></span></span></span></button>`).join('')}
-  </section>` : ''}`;
+  </section>` : ''}
+  ${trofeeKast()}`;
+}
+
+const BEKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4"/></svg>';
+const SLOT = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+function trofeeKast() {
+  const st = trofeeStand(), had = S.ik.trofeeen || {};
+  const n = TROFEEEN.filter(([k]) => had[k]).length;
+  return `<section class="kaart glas in" aria-labelledby="tr-titel">
+    <div class="kaart-kop"><h2 id="tr-titel">Trofeeënkast</h2><span class="kast-teller">${n} van ${TROFEEEN.length}</span></div>
+    <div class="kast">${TROFEEEN.map(([k, titel, uitleg, , voortgang]) => {
+      const op = had[k], [nu, doel] = voortgang(st), pct = Math.min(100, Math.floor(nu / doel * 100));
+      return `<div class="trofee${op ? ' aan' : ''}" role="img" aria-label="${esc(titel)}: ${esc(uitleg)}, ${op ? `behaald op ${langDatum(op)}` : `${pct}% op weg`}">
+        <div class="t-icoon">${op ? BEKER : SLOT}</div><b>${esc(titel)}</b>
+        ${op ? `<small>${kortDatum(op)}</small>` : `<span class="t-balk"><span style="width:${pct}%"></span></span>`}</div>`;
+    }).join('')}</div></section>`;
 }
 
 // Gestapelde staven (privé onder, groep boven) met tooltip bij tik of hover
@@ -848,9 +973,11 @@ function lesSheet(les, kopie = false) {
       if (!nieuw) return toast('Les bewaard');
       const na = dezeWeek().reduce((s, l) => s + l.duur, 0);
       vlucht();
-      if (eerste) { setTimeout(() => confetti(), 900); toast('Eerste les! Vamos!'); }
+      tril();
+      if (eerste) toast(`Eerste les · ${kreet()}`); // de trofee volgt vanzelf
       else if (Math.floor(na / 300) > Math.floor(voor / 300)) { setTimeout(() => confetti(), 900); toast(`Golden point! ${uren(Math.floor(na / 300) * 300)} deze week`, { duur: 3200 }); }
       else toast(`Les vastgelegd · ${kreet()}`);
+      trofeeen();
     };
     $('#weg')?.addEventListener('click', () => verwijder('lessen', les, 'Les'));
     $('#kopie')?.addEventListener('click', async () => {
@@ -898,6 +1025,8 @@ function instellingenSheet(daarna) {
       <label class="veld" data-veld="prive"><span>Privé per uur</span><input name="prive" inputmode="decimal" value="${euroKaal(ik.prive)}"><div class="fout"></div></label>
       <label class="veld" data-veld="groep"><span>Groep p.p. per uur</span><input name="groep" inputmode="decimal" value="${euroKaal(ik.groep)}"><div class="fout"></div></label>
     </div>
+    <h4 class="sectie">App</h4>
+    <label class="schakel"><span>Geluid bij de bal<small>Een padel-"pok" bij het vastleggen, factureren en de smash</small></span><input type="checkbox" name="geluid" role="switch" ${S.ik.geluid !== false ? 'checked' : ''}></label>
     <h4 class="sectie">Bericht bij de factuur</h4>
     <label class="veld"><span class="sr">Bericht</span><textarea name="bericht" rows="7">${esc(ik.bericht)}</textarea>
       <small class="hulp">{voornaam} {nummer} {bedrag} {vervaldatum} {iban} {tnv} {naam} worden automatisch ingevuld.</small></label>
@@ -912,6 +1041,7 @@ function instellingenSheet(daarna) {
     $('#backup').onclick = backupMaken;
     $('#terugzetten').onclick = backupTerug;
     $('#csv').onclick = exportCsv;
+    form.elements.geluid.onchange = e => { if (e.target.checked) { S.ik.geluid = true; pok(1); } };
     form.onsubmit = async e => {
       e.preventDefault();
       const f = form.elements, w = n => f[n].value.trim();
@@ -929,7 +1059,7 @@ function instellingenSheet(daarna) {
       Object.entries(fouten).forEach(([k, t]) => veldFout(k, t));
       const eerste = form.querySelector('.fout-aan');
       if (eerste) { schud(eerste); eerste.querySelector('input')?.focus(); return; }
-      Object.assign(S.ik, { naam: w('naam'), bedrijf: w('bedrijf'), adres: f.adres.value.trim(), email: w('email'), telefoon: w('telefoon'), kvk, btw, iban, tnv: w('tnv'), termijn, volgnr, jaar: new Date().getFullYear(), prive, groep, bericht: f.bericht.value.trim() || STANDAARD_BERICHT });
+      Object.assign(S.ik, { naam: w('naam'), bedrijf: w('bedrijf'), adres: f.adres.value.trim(), email: w('email'), telefoon: w('telefoon'), kvk, btw, iban, tnv: w('tnv'), termijn, volgnr, jaar: new Date().getFullYear(), prive, groep, bericht: f.bericht.value.trim() || STANDAARD_BERICHT, geluid: f.geluid.checked });
       await DB.zet('instellingen', S.ik, 'ik'); await laad(); await sluit();
       toast('Gegevens bewaard');
       daarna?.();
@@ -1035,8 +1165,9 @@ function factuurMaken(kid) {
       const f = await maakFactuur(k, regels.filter(x => gekozen.has(x.les.id)), datum, termijn);
       await sluit();
       S.fview = 'onbetaald'; teken();
-      confetti();
+      confetti(); pok(1); tril();
       factuurSheet(f);
+      trofeeen();
       toast(`Factuur ${f.nummer} klaar · ${kreet()}`); // na de sheet, anders valt hij erachter
     };
   });
@@ -1064,9 +1195,10 @@ async function maakFactuur(k, regels, datum, termijn) {
 /* ---------- Factuur bekijken, versturen, betaald ---------- */
 const DEEL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 const bestandsnaam = f => `Factuur ${f.nummer} ${f.aan.naam}.pdf`.replace(/[\\/:*?"<>|]/g, '');
-function bericht(f) {
+const HERINNERING = 'Hoi {voornaam},\n\nMisschien over het hoofd gezien: factuur {nummer} van {bedrag} stond open tot {vervaldatum}. Wil je het alsnog overmaken naar {iban} t.n.v. {tnv}, onder vermelding van {nummer}? Is het al betaald, dan kun je dit bericht negeren.\n\nGroet,\n{naam}';
+function bericht(f, sjabloon) {
   const v = { voornaam: f.aan.naam.split(/\s+/)[0], naam: f.van.naam, nummer: f.nummer, bedrag: euro(f.totaal), vervaldatum: langDatum(f.verval), iban: ibanMooi(f.van.iban), tnv: f.van.tnv || f.van.bedrijf || f.van.naam };
-  return (S.ik.bericht || STANDAARD_BERICHT).replace(/\{(\w+)\}/g, (m, k) => v[k] ?? m);
+  return (sjabloon || S.ik.bericht || STANDAARD_BERICHT).replace(/\{(\w+)\}/g, (m, k) => v[k] ?? m);
 }
 function download(blob, naam) {
   const a = document.createElement('a');
@@ -1081,8 +1213,10 @@ function factuurSheet(f) {
   const status = f.status === 'betaald' ? `<span class="badge">betaald op ${kortDatum(f.betaaldOp)}</span>`
     : teLaat(f) ? `<span class="badge rood">te laat, verviel ${kortDatum(f.verval)}</span>` : `<span class="badge grijs">open, vervalt ${kortDatum(f.verval)}</span>`;
   const max = 5, rest = f.regels.length - max;
+  const herinner = teLaat(f); // te laat: de hoofdknop wordt een herinnering
+  const tekst = () => herinner ? bericht(f, HERINNERING) : bericht(f);
   openSheet(`Factuur ${f.nummer}`, `
-    <div class="fstatus">${status}${f.verstuurdOp ? `<span class="badge grijs">verstuurd ${kortDatum(f.verstuurdOp)}</span>` : ''}</div>
+    <div class="fstatus">${status}${f.verstuurdOp ? `<span class="badge grijs">verstuurd ${kortDatum(f.verstuurdOp)}</span>` : ''}${f.herinnerdOp ? `<span class="badge grijs">herinnerd ${kortDatum(f.herinnerdOp)}</span>` : ''}</div>
     <button type="button" class="papier" id="bekijk" aria-label="Bekijk de PDF van factuur ${f.nummer}">
       <span class="p-kop"><span class="p-van">${BAL}<b>${esc(f.van.bedrijf || f.van.naam)}</b></span><span class="p-titel">FACTUUR</span></span>
       <span class="p-meta"><span>Aan <b>${esc(f.aan.naam)}</b></span><span>${f.nummer} · ${kortDatum(f.datum)}</span></span>
@@ -1091,7 +1225,7 @@ function factuurSheet(f) {
       <span class="p-tot"><span>Excl. btw ${euro(f.excl)} · btw ${euro(f.btw)}</span><b>${euro(f.totaal)}</b></span>
       <span class="p-hint">Tik om de PDF te bekijken</span>
     </button>
-    <div class="knoppen"><button type="button" class="knop hoofd met-icoon" id="deel">${DEEL}Versturen</button></div>
+    <div class="knoppen"><button type="button" class="knop hoofd met-icoon" id="deel">${DEEL}${herinner ? 'Stuur herinnering' : 'Versturen'}</button></div>
     <div class="knoppen">
       <button type="button" class="knop" id="kopieer">Kopieer bericht</button>
       <button type="button" class="knop" id="betaald">${f.status === 'betaald' ? 'Toch onbetaald' : 'Markeer betaald'}</button>
@@ -1104,32 +1238,33 @@ function factuurSheet(f) {
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     };
     $('#deel').onclick = async () => {
+      const tekstNu = tekst();
       if (!pdf) await klaar;
       if (!pdf) return;
       const file = new File([pdf], bestandsnaam(f), { type: 'application/pdf' });
-      const tekst = bericht(f);
+      const tekst = tekstNu;
       if (navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: `Factuur ${f.nummer}`, text: tekst });
-          await bewaarFactuur(f, { verstuurdOp: f.verstuurdOp || vandaag() });
-          await sluit(); toast(`Factuur ${f.nummer} verstuurd · ${kreet()}`);
+          await navigator.share({ files: [file], title: `${herinner ? 'Herinnering f' : 'F'}actuur ${f.nummer}`, text: tekst });
+          await bewaarFactuur(f, herinner ? { herinnerdOp: vandaag() } : { verstuurdOp: f.verstuurdOp || vandaag() });
+          await sluit(); toast(herinner ? `Herinnering ${f.nummer} verstuurd` : `Factuur ${f.nummer} verstuurd · ${kreet()}`);
           return;
         } catch (e) { if (e.name === 'AbortError') return; }
       }
       // Geen deelmenu (bv. op een computer): downloaden en bericht kopiëren
       download(pdf, bestandsnaam(f));
       try { await navigator.clipboard.writeText(tekst); } catch {}
-      toast('PDF gedownload en bericht gekopieerd', { actie: 'Markeer verstuurd', bij: async () => { await bewaarFactuur(f, { verstuurdOp: vandaag() }); toast('Gemarkeerd als verstuurd'); } });
+      toast('PDF gedownload en bericht gekopieerd', { actie: 'Markeer verstuurd', bij: async () => { await bewaarFactuur(f, herinner ? { herinnerdOp: vandaag() } : { verstuurdOp: vandaag() }); toast('Gemarkeerd als verstuurd'); } });
     };
     $('#kopieer').onclick = async () => {
-      try { await navigator.clipboard.writeText(bericht(f)); toast('Bericht gekopieerd'); }
+      try { await navigator.clipboard.writeText(tekst()); toast(herinner ? 'Herinnering gekopieerd' : 'Bericht gekopieerd'); }
       catch { toast('Kopiëren lukte niet'); }
     };
     $('#betaald').onclick = async () => {
       const betaald = f.status !== 'betaald';
       await bewaarFactuur(f, betaald ? { status: 'betaald', betaaldOp: vandaag() } : { status: 'open', betaaldOp: null });
       await sluit();
-      if (betaald) { confetti(36); toast('Juego, set y partido! Betaald', { duur: 3000 }); } else toast('Weer op onbetaald gezet');
+      if (betaald) { confetti(36); pok(1); tril(20); toast('Juego, set y partido! Betaald', { duur: 3000 }); trofeeen(); } else toast('Weer op onbetaald gezet');
     };
     $('#weg').onclick = () => verwijderFactuur(f);
   });
@@ -1264,6 +1399,8 @@ $('#main').addEventListener('click', e => {
     else S.stat.klant = S.stat.klant === b.dataset.filterklant ? '' : b.dataset.filterklant;
     return teken();
   }
+  const hh = e.target.closest('[data-herhaal]');
+  if (hh) return herhaal(hh.dataset.herhaal === 'alles' ? herhaalVoorstellen() : [S.lessen.find(l => l.id === hh.dataset.herhaal)]);
   const actie = e.target.closest('[data-actie]')?.dataset.actie;
   if (actie === 'backup') return backupMaken();
   if (actie === 'backup-later') { S.backupLater = true; return teken(false); }
@@ -1296,6 +1433,7 @@ new IntersectionObserver(([e]) => $('#balk').classList.toggle('zicht', !e.isInte
   const h = location.hash.slice(1); if (VIEWS.includes(h)) S.view = h; else if (h === 'open') S.view = 'facturen';
   intro();
   await laad(); teken();
+  trofeeen(true); // wat er al is, telt stil mee
   navigator.storage?.persist?.(); // vraag de browser de data niet op te ruimen
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js');
 })();

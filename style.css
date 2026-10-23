@@ -510,3 +510,39 @@ svg.inline { width: 16px; height: 16px; vertical-align: -2px; color: var(--baan)
 .m-knoppen { grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 4px; }
 .knop.klein { flex: none; min-height: 40px; font-size: 15px; padding: 0 16px; border-radius: 12px; }
 .m-tekst span { display: block; line-height: 1.4; margin-top: 2px; }
+
+/* ---------- Rally, herhalen, trofeeën, schakelaar ---------- */
+.rally { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; color: var(--zacht); margin: 8px 0 2px; }
+.rally b { color: var(--tekst); }
+.rally-ballen { display: inline-flex; }
+.rally-ballen .padelbal { width: 14px; height: 14px; margin-left: -4px; box-shadow: 0 0 0 2px var(--bg); }
+.rally-ballen .padelbal::before, .rally-ballen .padelbal::after { border-width: 1.2px; }
+.rally-ballen .padelbal:first-child { margin-left: 0; }
+
+.herhaal { border-radius: var(--radius); padding: 14px 14px 12px; margin-top: 12px; }
+.herhaal .kaart-kop { margin-bottom: 8px; }
+.herhaal h2 { font-size: 15px; margin: 0; }
+.herhaal-chip { border-style: dashed; padding-left: 10px; }
+.herhaal-chip b { font-weight: 700; }
+.plusje { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--bal); color: #14240a; font-weight: 800; font-size: 15px; line-height: 1; }
+
+.kast-teller { font-size: 13px; color: var(--zacht); font-weight: 600; }
+.kast { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.trofee { border-radius: 16px; padding: 12px 6px 10px; text-align: center; background: var(--druk); min-width: 0; }
+.trofee b { display: block; font-size: 13px; line-height: 1.2; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trofee small { color: var(--zacht); font-size: 11px; font-weight: 600; }
+.t-icoon { width: 40px; height: 40px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; color: var(--zacht); background: var(--glas); }
+.t-icoon svg { width: 22px; height: 22px; }
+.trofee:not(.aan) b { color: var(--zacht); font-weight: 600; }
+.trofee.aan { background: var(--geel-zacht); }
+.trofee.aan .t-icoon { background: radial-gradient(circle at 30% 25%, #f6ffb8, var(--bal) 55%, var(--bal-donker)); color: #2a3a00; box-shadow: 0 4px 12px rgba(150,180,0,.35); }
+.t-balk { display: block; height: 4px; border-radius: 2px; background: var(--glas); margin: 6px 10px 2px; overflow: hidden; }
+.t-balk span { display: block; height: 100%; background: var(--s-prive); border-radius: 2px; }
+
+.schakel { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--glas); border: 1px solid var(--glas-rand); margin-bottom: 14px; cursor: pointer; }
+.schakel small { display: block; color: var(--zacht); font-size: 13px; }
+.schakel input { -webkit-appearance: none; appearance: none; width: 51px; height: 31px; border-radius: 999px; background: var(--druk); position: relative; flex: none; transition: background-color .2s; cursor: pointer; margin: 0; }
+.schakel input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .3s var(--veer); }
+.schakel input:checked { background: #34c759; }
+.schakel input:checked::after { transform: translateX(20px); }
+.schakel input:focus-visible { outline: 3px solid var(--baan); outline-offset: 2px; }
